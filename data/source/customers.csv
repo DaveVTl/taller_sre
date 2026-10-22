@@ -4,3 +4,11 @@ customer_id,name,age,country,email
 3,María,30,CL,maria@example.com
 3,María,30,CL,maria_dup@example.com
 4,,17,AR,x@y.com
+5,Jorge,42,CL,jorge@example.com
+6,Camila,16,CL,camila@example.com
+7,Pedro,51,AR,pedro@example.com
+8,Sofía,24,CO,sofia@example.com
+9,Diego,38,PE,
+10,Valentina,29,CO,valentina@example.com
+11,Mateo,33,CL,mateo@example.com
+12,Lucía,27,PE,lucia@example.com

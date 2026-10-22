@@ -1,5 +1,6 @@
 import os
 import csv
+import glob
 import json
 from datetime import datetime, timezone
 
@@ -21,37 +22,39 @@ def main() -> None:
     token = env("DATABRICKS_TOKEN")
 
     # --- Pipeline params ---
-    csv_path = os.environ.get("CSV_PATH", "data/source/customers.csv")
+    csv_dir = os.environ.get("CSV_DIR", "data/source")
     target_table = os.environ.get("TARGET_TABLE", "gameday.bronze_customers")
     source_name = os.environ.get("SOURCE_NAME", "github_actions")
 
     print("=== Bronze ingestion starting ===")
-    print(f"CSV_PATH      : {csv_path}")
+    print(f"CSV_DIR       : {csv_dir}")
     print(f"TARGET_TABLE  : {target_table}")
     print(f"SOURCE_NAME   : {source_name}")
     print(f"DATABRICKS_HOST: {host}")
     print(f"HTTP_PATH     : {http_path}")
 
-    # Validate CSV exists
-    if not os.path.exists(csv_path):
+    # Lee todos los lotes (*.csv) de la carpeta: cada corrida recarga todo
+    csv_files = sorted(glob.glob(os.path.join(csv_dir, "*.csv")))
+    if not csv_files:
         raise FileNotFoundError(
-            f"CSV file not found at '{csv_path}'. "
-            "Verify the file exists in the repo and CSV_PATH env is correct."
+            f"No CSV files found in '{csv_dir}'. "
+            "Verify the folder exists in the repo and CSV_DIR env is correct."
         )
 
-    # Read CSV into list of rows (raw_payload JSON)
     ingest_ts = datetime.now(timezone.utc).isoformat()
 
     rows_to_insert: list[tuple[str, str, str]] = []
-    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        if reader.fieldnames is None:
-            raise ValueError("CSV has no header row. Please include column names in the first row.")
+    for csv_path in csv_files:
+        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames is None:
+                raise ValueError(f"{csv_path} has no header row. Please include column names in the first row.")
 
-        for row in reader:
-            # Store row as JSON string (raw bronze)
-            raw_payload = json.dumps(row, ensure_ascii=False)
-            rows_to_insert.append((ingest_ts, source_name, raw_payload))
+            for row in reader:
+                # Store row as JSON string (raw bronze)
+                raw_payload = json.dumps(row, ensure_ascii=False)
+                rows_to_insert.append((ingest_ts, f"{source_name}:{os.path.basename(csv_path)}", raw_payload))
+        print(f"Read {csv_path}")
 
     if not rows_to_insert:
         print("No data rows found in CSV. Nothing to insert.")
