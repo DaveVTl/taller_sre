@@ -69,7 +69,7 @@ que en Azure o AWS. Así un reporte de costos lo puede leer solo.
   ```
 
 - Política como código: el workflow **FinOps – Política de tags** corre después de
-  cada pipeline y **falla si una tabla Gold no tiene tag `owner`**. Hoy está en rojo.
+  cada pipeline y **falla si una tabla Gold no tiene tag `owner`**. Si lo corren hoy, sale en rojo.
   Déjenlo en verde (también lo pueden correr a mano desde Actions).
 
 - Los tags de una tabla sirven para gobierno, pero **no** aparecen en la factura.
