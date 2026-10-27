@@ -158,7 +158,7 @@ Completen `ops/playbook-finops.md`, que tiene 4 preguntas sobre **este** pipelin
 
 1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`.
 2. ¿Cuánto costó el incidente? Corridas extra y horas-persona.
-3. ¿Quién es el dueño del costo?
+3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte.
 4. ¿Qué deciden? Una decisión sobre un costo oculto del repo, con dueño y fecha.
 
 ✅ Checkpoint: hay al menos una decisión con dueño y fecha.
