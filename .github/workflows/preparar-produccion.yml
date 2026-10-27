@@ -1,0 +1,79 @@
+name: Game day – Preparar producción
+
+# Arma "producción" en el schema gameday de tu Databricks:
+# 1) deja el schema vacío, 2) corre el pipeline como el jueves,
+# 3) lo corre como el viernes. Al terminar, empieza el reloj del incidente.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install databricks-sql-connector
+
+      - name: Reset schema gameday
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          SQL_FILE: gameday/reset.sql
+        run: |
+          python framework/processing/run_sql.py
+
+  jueves:
+    needs: reset
+    uses: ./.github/workflows/dataops-pipeline.yml
+    with:
+      ref: 98dd769a842ff5c3c28a6080d9eb2efa4b198868
+    secrets: inherit
+
+  viernes:
+    needs: jueves
+    uses: ./.github/workflows/dataops-pipeline.yml
+    with:
+      ref: 9ad2866fde3006d27a1aa459681345b56fc75e4f
+    secrets: inherit
+
+  inicio-incidente:
+    needs: viernes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install databricks-sql-connector
+
+      - name: Start the incident clock
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+          STAGE: incidente_inicio
+          STATUS: success
+          DETAILS: "Producción lista. Lean incidente/alerta.md"
+        run: |
+          python framework/monitoring/log_event.py
+          echo "## 🚨 Producción lista: empieza el incidente" >> "$GITHUB_STEP_SUMMARY"
+          echo "Lean incidente/alerta.md. El reloj del MTTR ya corre." >> "$GITHUB_STEP_SUMMARY"
