@@ -271,7 +271,7 @@ Se corren en el **SQL Editor** de Databricks, con su SQL Warehouse encendido. So
 
    ```sql
    SELECT country_code, country_name, COUNT(*) AS clientes
-   FROM gameday.silver_customers_v2 VERSION AS OF 3
+   FROM gameday.silver_customers_v2 VERSION AS OF 0  -- cambien el 0
    GROUP BY country_code, country_name;
    ```
 
