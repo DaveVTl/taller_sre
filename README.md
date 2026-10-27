@@ -157,7 +157,7 @@ Cuando crean que terminaron, corran **Actions → Game day – Verificar**. Pued
 
 Completen `ops/playbook-finops.md`, que tiene 4 preguntas sobre **este** pipeline:
 
-1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`.
+1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`, y contrástenlo con lo que registra Databricks (`system.billing.usage` y `system.query.history`; las queries están en el playbook).
 2. ¿Cuánto costó el incidente? Corridas extra y horas-persona.
 3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte. El workflow **FinOps – Política de tags** debe quedar en verde.
 4. ¿Qué deciden? Una decisión sobre un costo oculto del repo, con dueño y fecha.

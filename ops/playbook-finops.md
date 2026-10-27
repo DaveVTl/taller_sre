@@ -25,6 +25,32 @@ Pistas para calcular:
 - Minutos de warehouse = desde la primera query hasta la última (`ops_event_log`) **más** el auto-stop.
 - Comparen las dos partidas: ¿cuál pesa más y por qué?
 
+### Midan, no supongan: lo que registra Databricks
+
+Las tarifas de arriba son un supuesto. El consumo real lo registra el propio
+Databricks, también en Free Edition. Úsenlo para contrastar su estimación.
+
+```sql
+-- ¿En qué se fue el consumo? (DBU por producto, últimos 7 días)
+SELECT billing_origin_product, sku_name, ROUND(SUM(usage_quantity), 2) AS dbu
+FROM system.billing.usage
+WHERE usage_date >= current_date() - 7
+GROUP BY ALL ORDER BY dbu DESC;
+
+-- ¿Quién lanzó las queries? GitHub Actions aparece como el conector de Python
+SELECT client_application, executed_by, COUNT(*) AS sentencias,
+       ROUND(SUM(total_duration_ms) / 60000, 1) AS minutos_de_query
+FROM system.query.history
+WHERE start_time >= current_date() - 7
+GROUP BY ALL ORDER BY minutos_de_query DESC;
+```
+
+Preguntas:
+
+- Comparen los **minutos de query** con lo que se cobró. ¿Qué parte del costo es trabajo útil y qué parte es el warehouse encendido sin hacer nada?
+- ¿Aparece algo que nadie pidió? Por ejemplo `PREDICTIVE_OPTIMIZATION`, el mantenimiento automático de las tablas.
+- `executed_by`: ¿con qué usuario corre el pipeline? Si es el de una persona, ¿cómo se separa el costo de CI del trabajo manual?
+
 ## 1. ¿Cuánto cuesta una corrida?
 
 | Stage | Minutos (Actions) | Minutos de warehouse (`ops_event_log`) | Costo estimado |
