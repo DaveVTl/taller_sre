@@ -121,7 +121,7 @@ Preguntas guía:
 - ¿A qué clientes afectó? ¿Cuántos?
 - ¿Por qué ningún check lo frenó?
 
-Tienen el historial del repo, el historial de versiones de las tablas y `gameday.ops_event_log`.
+Tienen el historial del repo, el historial de versiones de las tablas y `gameday.ops_event_log`. Las [queries útiles](#queries-útiles) les sirven de punto de partida.
 
 ✅ Checkpoint: anotan en el postmortem el cambio culpable y la hora en que lo encontraron.
 
@@ -157,7 +157,7 @@ Cuando crean que terminaron, corran **Actions → Game day – Verificar**. Pued
 
 Completen `ops/playbook-finops.md`, que tiene 4 preguntas sobre **este** pipeline:
 
-1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`, y contrástenlo con el consumo real que registra Databricks (ver abajo).
+1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log` (queries 9 y 10 de [queries útiles](#queries-útiles)), y contrástenlo con el consumo real que registra Databricks (ver abajo).
 2. ¿Cuánto costó el incidente? Corridas extra y horas-persona.
 3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte. El workflow **FinOps – Política de tags** debe quedar en verde.
 4. ¿Qué deciden? Una decisión sobre un costo oculto del repo, con dueño y fecha.
@@ -220,6 +220,128 @@ Abran el PR a `main` de su fork con la definición de listo y compartan:
 - Qué cambiarían para que no vuelva a pasar.
 
 ✅ Checkpoint: PR abierto con `verificar` en verde.
+
+---
+
+## Queries útiles
+
+Se corren en el **SQL Editor** de Databricks, con su SQL Warehouse encendido. Son de solo lectura: miran, no cambian nada. Úsenlas como punto de partida; la decisión de qué hacer con lo que encuentren es del equipo.
+
+**Tablas del game day** (todas en el schema `gameday`):
+
+| Tabla | Qué guarda |
+| --- | --- |
+| `bronze_customers` | Los CSV tal cual llegaron, en JSON (`raw_payload`) |
+| `ref_paises` | El catálogo de países que carga el stage `ref` |
+| `silver_customers_v2` | Un registro por cliente, con calidad (`dq_status`) y país |
+| `gold_contactables_por_pais` | Lo que ve Marketing: % de clientes contactables por país |
+| `ops_event_log` | Una fila por stage de cada corrida: cuándo terminó y cómo |
+| `ops_dq_results` | El resultado de cada check de calidad |
+
+### Detectar: ¿qué ve Marketing y de dónde sale?
+
+1. **Lo que ve Marketing.** Comparen con lo que esperarían por los CSV de `data/source/`. ¿Falta algún país? ¿Alguno está inflado?
+
+   ```sql
+   SELECT * FROM gameday.gold_contactables_por_pais ORDER BY pais;
+   ```
+
+2. **Clientes por código de país en Silver.** El código viene del CSV; el nombre y la región vienen del catálogo. Si un código aparece con un nombre que no le corresponde, el problema está en el cruce.
+
+   ```sql
+   SELECT country_code, country_name, region, COUNT(*) AS clientes
+   FROM gameday.silver_customers_v2
+   GROUP BY country_code, country_name, region
+   ORDER BY country_code;
+   ```
+
+3. **El catálogo de países.** Cada código debería tener un nombre único y distinto.
+
+   ```sql
+   SELECT * FROM gameday.ref_paises ORDER BY country_code;
+   ```
+
+4. **Historial de una tabla.** Delta guarda una versión por cada escritura: quién, cuándo y con qué operación. Sirve para saber **desde qué versión** está mal el dato.
+
+   ```sql
+   DESCRIBE HISTORY gameday.silver_customers_v2;
+   ```
+
+5. **Mirar una versión anterior** (time travel). Solo lee; no cambia la tabla. Cambien el número por una versión del historial.
+
+   ```sql
+   SELECT country_code, country_name, COUNT(*) AS clientes
+   FROM gameday.silver_customers_v2 VERSION AS OF 3
+   GROUP BY country_code, country_name;
+   ```
+
+6. **Qué corrió y cuándo.** La línea de tiempo del pipeline, para el postmortem.
+
+   ```sql
+   SELECT run_id, event_ts, stage, status, details
+   FROM gameday.ops_event_log
+   ORDER BY event_ts DESC;
+   ```
+
+### Recuperar: ¿quedó bien?
+
+7. **Sin duplicados.** Debe devolver cero filas: un registro por cliente.
+
+   ```sql
+   SELECT customer_id, COUNT(*) AS veces
+   FROM gameday.silver_customers_v2
+   GROUP BY customer_id
+   HAVING COUNT(*) > 1;
+   ```
+
+8. **Clientes sin país mapeado.** Debe devolver cero filas.
+
+   ```sql
+   SELECT customer_id, country_code
+   FROM gameday.silver_customers_v2
+   WHERE country_name IS NULL;
+   ```
+
+Al final, quien decide si está bien es **Game day – Verificar**, no estas queries.
+
+### FinOps: ¿cuánto dura y quién es el dueño?
+
+9. **Duración de cada stage.** `ops_event_log` guarda cuándo **terminó** cada stage; la duración es la diferencia con el evento anterior de la misma corrida. La primera fila de cada corrida queda en blanco: usen la duración del job en Actions.
+
+   ```sql
+   SELECT
+       run_id,
+       stage,
+       event_ts,
+       unix_timestamp(event_ts)
+         - unix_timestamp(LAG(event_ts) OVER (PARTITION BY run_id ORDER BY event_ts)) AS segundos
+   FROM gameday.ops_event_log
+   ORDER BY run_id, event_ts;
+   ```
+
+10. **Duración total por corrida.** Es el tiempo de warehouse que pagan, **sin** contar el auto-stop.
+
+    ```sql
+    SELECT
+        run_id,
+        MIN(event_ts) AS inicio,
+        MAX(event_ts) AS fin,
+        ROUND((unix_timestamp(MAX(event_ts)) - unix_timestamp(MIN(event_ts))) / 60, 1) AS minutos
+    FROM gameday.ops_event_log
+    GROUP BY run_id
+    ORDER BY inicio DESC;
+    ```
+
+11. **Tags de las tablas.** Muestra quién es el dueño de cada tabla. Si una tabla Gold no aparece con `owner`, **FinOps – Política de tags** sale en rojo.
+
+    ```sql
+    SELECT table_name, tag_name, tag_value
+    FROM information_schema.table_tags
+    WHERE schema_name = 'gameday'
+    ORDER BY table_name, tag_name;
+    ```
+
+El consumo real en DBU (tablas `system.billing.usage` y `system.query.history`) está en el [paso 7](#7-playbook-finops-20-min).
 
 ---
 
