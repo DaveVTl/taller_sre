@@ -157,10 +157,57 @@ Cuando crean que terminaron, corran **Actions → Game day – Verificar**. Pued
 
 Completen `ops/playbook-finops.md`, que tiene 4 preguntas sobre **este** pipeline:
 
-1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`, y contrástenlo con lo que registra Databricks (`system.billing.usage` y `system.query.history`; las queries están en el playbook).
+1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`, y contrástenlo con el consumo real que registra Databricks (ver abajo).
 2. ¿Cuánto costó el incidente? Corridas extra y horas-persona.
 3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte. El workflow **FinOps – Política de tags** debe quedar en verde.
 4. ¿Qué deciden? Una decisión sobre un costo oculto del repo, con dueño y fecha.
+
+#### Cómo ver el consumo real en Databricks
+
+Databricks registra lo que consumen en tablas de sistema. Están disponibles también en Free Edition. Córranlas en el **SQL Editor**.
+
+**1. ¿En qué se fue el consumo?**
+
+```sql
+SELECT billing_origin_product, sku_name, ROUND(SUM(usage_quantity), 2) AS dbu
+FROM system.billing.usage
+WHERE usage_date >= current_date() - 7
+GROUP BY ALL
+ORDER BY dbu DESC;
+```
+
+`system.billing.usage` es la "factura" detallada:
+
+- Cada fila es un consumo medido en **DBU**, la unidad con la que cobra Databricks.
+- `billing_origin_product` dice qué lo generó: el SQL warehouse, el almacenamiento, el mantenimiento automático de tablas (`PREDICTIVE_OPTIMIZATION`), etc.
+- Para pasarlo a dólares, multipliquen los DBU por la tarifa del playbook (USD 0,70 por DBU).
+- Busquen consumos que nadie pidió. Ese es un costo oculto.
+
+**2. ¿Quién lanzó las queries y cuánto tardaron?**
+
+```sql
+SELECT client_application, executed_by, COUNT(*) AS sentencias,
+       ROUND(SUM(total_duration_ms) / 60000, 1) AS minutos_de_query
+FROM system.query.history
+WHERE start_time >= current_date() - 7
+GROUP BY ALL
+ORDER BY minutos_de_query DESC;
+```
+
+`system.query.history` guarda cada sentencia SQL que corrió en el warehouse:
+
+- `client_application` dice desde dónde vino. GitHub Actions aparece como **"Databricks SQL Connector for Python"**. Lo que hicieron a mano aparece como **"SQL Editor"**.
+- `executed_by` es el usuario que la ejecutó.
+- `minutos_de_query` es el tiempo de trabajo útil.
+
+**Cómo se lee junto:** comparen los minutos de query con los DBU cobrados. Un warehouse 2X-Small consume unos 4 DBU por hora encendido, esté trabajando o no.
+
+- Si tienen pocos minutos de query y muchos DBU, la diferencia es el warehouse **encendido sin hacer nada** hasta que se apaga solo (auto-stop).
+- Si `executed_by` es una persona y no una cuenta de servicio, no se puede separar el costo del pipeline del trabajo manual.
+
+Las dos cosas son buenas candidatas para la pregunta 4.
+
+> Si alguna tabla no aparece, su usuario puede no tener permiso sobre `system`. En ese caso usen solo las tarifas del playbook.
 
 ✅ Checkpoint: hay al menos una decisión con dueño y fecha.
 
