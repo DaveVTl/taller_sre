@@ -1,5 +1,5 @@
 -- Create Silver v2 (contract with DQ flags + payload)
-CREATE TABLE IF NOT EXISTS demo.silver_customers_v2 (
+CREATE TABLE IF NOT EXISTS gameday.silver_customers_v2 (
     ingest_ts TIMESTAMP,
     customer_id STRING,
     customer_name STRING,

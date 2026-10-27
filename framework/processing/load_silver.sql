@@ -65,4 +65,4 @@ SELECT
         ) < 18 THEN 'WARN_UNDERAGE'
         ELSE 'PASS'
     END AS dq_status
-FROM demo.bronze_customers;
+FROM gameday.bronze_customers;

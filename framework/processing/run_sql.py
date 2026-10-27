@@ -6,7 +6,7 @@ HTTP_PATH = os.environ["DATABRICKS_HTTP_PATH"]
 TOKEN = os.environ["DATABRICKS_TOKEN"]
 
 SQL_FILE = os.environ.get("SQL_FILE")
-SILVER_TABLE = os.environ.get("SILVER_TABLE", "demo.silver_customers_v2")  # default
+SILVER_TABLE = os.environ.get("SILVER_TABLE", "gameday.silver_customers_v2")  # default
 
 def main():
     if not SQL_FILE:

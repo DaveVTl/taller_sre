@@ -22,7 +22,7 @@ def main() -> None:
 
     # --- Pipeline params ---
     csv_path = os.environ.get("CSV_PATH", "data/source/customers.csv")
-    target_table = os.environ.get("TARGET_TABLE", "demo.bronze_customers")
+    target_table = os.environ.get("TARGET_TABLE", "gameday.bronze_customers")
     source_name = os.environ.get("SOURCE_NAME", "github_actions")
 
     print("=== Bronze ingestion starting ===")

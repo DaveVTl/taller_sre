@@ -7,7 +7,7 @@ HTTP_PATH = os.environ["DATABRICKS_HTTP_PATH"]
 TOKEN = os.environ["DATABRICKS_TOKEN"]
 
 RUN_ID = os.environ.get("RUN_ID", "manual")
-SILVER_TABLE = os.environ.get("SILVER_TABLE", "demo.silver_customers_v2")
+SILVER_TABLE = os.environ.get("SILVER_TABLE", "gameday.silver_customers_v2")
 
 def fetch_one(cur, stmt: str):
     cur.execute(stmt)
@@ -26,17 +26,17 @@ def main():
 
             # Guarda resultados en ops_dq_results
             cur.execute(
-                "INSERT INTO demo.ops_dq_results VALUES (?, current_timestamp(), ?, 'total_rows', 'INFO', ?, ?)",
+                "INSERT INTO gameday.ops_dq_results VALUES (?, current_timestamp(), ?, 'total_rows', 'INFO', ?, ?)",
                 (RUN_ID, SILVER_TABLE, float(total), f"checked_at={checked_at}")
             )
 
             cur.execute(
-                "INSERT INTO demo.ops_dq_results VALUES (?, current_timestamp(), ?, 'name_null_count', ?, ?, ?)",
+                "INSERT INTO gameday.ops_dq_results VALUES (?, current_timestamp(), ?, 'name_null_count', ?, ?, ?)",
                 (RUN_ID, SILVER_TABLE, "FAIL" if name_null > 0 else "PASS", float(name_null), "name is null/empty")
             )
 
             cur.execute(
-                "INSERT INTO demo.ops_dq_results VALUES (?, current_timestamp(), ?, 'underage_count', ?, ?, ?)",
+                "INSERT INTO gameday.ops_dq_results VALUES (?, current_timestamp(), ?, 'underage_count', ?, ?, ?)",
                 (RUN_ID, SILVER_TABLE, "WARN" if underage > 0 else "PASS", float(underage), "age < 18")
             )
 

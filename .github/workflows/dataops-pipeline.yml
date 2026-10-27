@@ -67,7 +67,7 @@ jobs:
           DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           CSV_PATH: data/source/customers.csv
-          TARGET_TABLE: demo.bronze_customers
+          TARGET_TABLE: gameday.bronze_customers
           SOURCE_NAME: github_actions
         run: |
           python framework/ingestion/ingest_bronze.py
@@ -105,7 +105,7 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           env:
           SQL_FILE: framework/processing/load_silver.sql
-          SILVER_TABLE: demo.silver_customers_v2
+          SILVER_TABLE: gameday.silver_customers_v2
         run: |
           python framework/processing/run_sql.py
 
@@ -132,7 +132,7 @@ jobs:
           DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           RUN_ID: ${{ github.run_id }}
-          SILVER_TABLE: demo.silver_customers_v2
+          SILVER_TABLE: gameday.silver_customers_v2
         run: |
           python framework/validation/validate_silver.py
 
