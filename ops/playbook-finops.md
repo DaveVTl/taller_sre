@@ -68,6 +68,10 @@ que en Azure o AWS. Así un reporte de costos lo puede leer solo.
   WHERE schema_name = 'gameday' AND table_name = 'gold_contactables_por_pais';
   ```
 
+- Política como código: el workflow **FinOps – Política de tags** corre después de
+  cada pipeline y **falla si una tabla Gold no tiene tag `owner`**. Hoy está en rojo.
+  Déjenlo en verde (también lo pueden correr a mano desde Actions).
+
 - Los tags de una tabla sirven para gobierno, pero **no** aparecen en la factura.
   Para atribuir costo, el tag va en lo que consume: el SQL Warehouse (sección
   *Tags* al editarlo). Ese tag llega a `system.billing.usage.custom_tags`.

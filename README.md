@@ -70,7 +70,8 @@ Cada pista que pidan a la docente cuesta 5 puntos.
 └── .github/workflows/
     ├── dataops-pipeline.yml     ← el pipeline de producción
     ├── preparar-produccion.yml  ← arma producción y empieza el incidente
-    └── verificar.yml            ← revisa si volvieron a un estado bueno
+    ├── verificar.yml            ← revisa si volvieron a un estado bueno
+    └── finops-politica-tags.yml ← falla si una tabla Gold no tiene dueño
 ```
 
 El pipeline corre por stages: `deploy → bronze + ref → silver → validation → gold`, más `tests`. Cada stage deja su registro en `gameday.ops_event_log`.
@@ -158,7 +159,7 @@ Completen `ops/playbook-finops.md`, que tiene 4 preguntas sobre **este** pipelin
 
 1. ¿Cuánto cuesta una corrida? Usen la duración de cada job en Actions y los tiempos de `gameday.ops_event_log`.
 2. ¿Cuánto costó el incidente? Corridas extra y horas-persona.
-3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte.
+3. ¿Quién es el dueño del costo? Déjenlo en tags sobre la tabla y el warehouse, no en un documento aparte. El workflow **FinOps – Política de tags** debe quedar en verde.
 4. ¿Qué deciden? Una decisión sobre un costo oculto del repo, con dueño y fecha.
 
 ✅ Checkpoint: hay al menos una decisión con dueño y fecha.
