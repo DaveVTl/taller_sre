@@ -2,7 +2,7 @@
 
 > Sin culpables: buscamos qué falló en el proceso, no quién se equivocó.
 
-**Equipo y roles:** Comandante: [ ... ] · Operador: [ ... ] · Comunicador: [ ... ]
+**Equipo y roles:** Comandante: [ Cesar ] · Operador: [ Yovani ] · Comunicador: [ Davie ]
 
 ## Resumen
 
